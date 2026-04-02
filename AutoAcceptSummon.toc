@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: Auto Accept Summon
+## Notes: Auto-accepts summons when little time remains (default 5s, configurable 5–120s). Countdown on the summon dialog. /aas or /autoacceptsummon to configure.
+## Author: Bangerz-DarkIron
+## Version: 1.1.0
+## SavedVariables: AutoAcceptSummonDB
+
+AutoAcceptSummon.lua
