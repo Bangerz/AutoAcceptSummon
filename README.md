@@ -8,7 +8,7 @@ World of Warcraft **retail** addon (Midnight / 12.x interface). When someone sum
 - **Default:** accepts when **5 seconds** or fewer remain (and you are **not in combat**).
 - **Configurable:** any whole number from **5** to **120** seconds.
 - If you **accept** or **decline** before that window, the addon does nothing further for that summon.
-- Adds a **countdown line** on the summon dialog (time until auto-accept, combat pause, or “Auto-accepting…”).
+- Shows a **countdown bar** directly under the summon dialog (same style as Auto Accept Rez): time until auto-accept, combat pause, or “accepting…”.
 
 ## Install
 

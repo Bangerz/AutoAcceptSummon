@@ -1,6 +1,6 @@
 --[[
   Auto-accepts when C_SummonInfo.GetSummonConfirmTimeLeft() is in (0, threshold],
-  where threshold is configurable (default 5 sec, range 5–120 sec). Countdown on CONFIRM_SUMMON dialog.
+  where threshold is configurable (default 5 sec, range 5–120 sec). Feedback bar below the summon dialog.
 ]]
 
 local ADDON_NAME = "AutoAcceptSummon"
@@ -11,6 +11,27 @@ local SECONDS_MAX = 120
 local POLL_INTERVAL = 0.2
 
 AutoAcceptSummonDB = AutoAcceptSummonDB or {}
+
+-- Bar just under the summon prompt (same pattern as Auto Accept Rez)
+local feedback = CreateFrame("Frame", "AutoAcceptSummonFeedback", UIParent, "BackdropTemplate")
+feedback:SetSize(520, 36)
+feedback:SetFrameStrata("FULLSCREEN_DIALOG")
+feedback:SetFrameLevel(5000)
+feedback:EnableMouse(false)
+feedback:SetBackdrop({
+  bgFile = "Interface\\Buttons\\WHITE8x8",
+  edgeFile = "Interface\\Buttons\\WHITE8x8",
+  tile = false,
+  tileSize = 0,
+  edgeSize = 1,
+  insets = { left = 0, right = 0, top = 0, bottom = 0 },
+})
+feedback:SetBackdropColor(0, 0, 0, 0.55)
+feedback:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.9)
+local feedbackText = feedback:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+feedbackText:SetPoint("CENTER")
+feedbackText:SetText("")
+feedback:Hide()
 
 local function clampThreshold(n)
   n = math.floor(tonumber(n) or SECONDS_MIN)
@@ -45,30 +66,33 @@ local function getSummonPopup()
   return name and _G[name]
 end
 
-local function updateCountdownText()
-  local popup = getSummonPopup()
-  if not popup or not activeToken then
+local function hideFeedback()
+  feedback:Hide()
+  feedbackText:SetText("")
+end
+
+local function updateFeedback()
+  if not activeToken then
+    hideFeedback()
     return
   end
   if summonToken() ~= activeToken then
+    hideFeedback()
     return
   end
 
-  local fs = popup.AASCountdownText
-  if not fs then
-    fs = popup:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    local anchor = popup.text or popup.Text
-    if anchor then
-      fs:SetPoint("TOP", anchor, "BOTTOM", 0, -6)
-    else
-      fs:SetPoint("BOTTOM", popup, "BOTTOM", 0, 36)
-    end
-    popup.AASCountdownText = fs
+  local popup = getSummonPopup()
+  if not popup then
+    hideFeedback()
+    return
   end
+
+  feedback:ClearAllPoints()
+  feedback:SetPoint("TOP", popup, "BOTTOM", 0, -8)
 
   local timeLeft = C_SummonInfo.GetSummonConfirmTimeLeft()
   if timeLeft <= 0 then
-    fs:Hide()
+    hideFeedback()
     return
   end
 
@@ -77,24 +101,17 @@ local function updateCountdownText()
 
   if timeLeft > threshold then
     local untilAuto = math.max(0, math.ceil(timeLeft - threshold))
-    fs:SetText(format("Auto-accept in %d sec.", untilAuto))
-    fs:SetTextColor(0.85, 0.85, 0.85)
-    fs:Show()
+    feedbackText:SetFormattedText("Auto Accept Summon: auto-accept in %d sec.", untilAuto)
+    feedbackText:SetTextColor(0.85, 0.85, 0.85)
+    feedback:Show()
   elseif inCombat then
-    fs:SetText("Auto-accept paused (in combat).")
-    fs:SetTextColor(1, 0.82, 0)
-    fs:Show()
+    feedbackText:SetText("Auto Accept Summon: paused (in combat).")
+    feedbackText:SetTextColor(1, 0.82, 0)
+    feedback:Show()
   else
-    fs:SetText("Auto-accepting…")
-    fs:SetTextColor(0.6, 1, 0.6)
-    fs:Show()
-  end
-end
-
-local function hideCountdownText()
-  local popup = getSummonPopup()
-  if popup and popup.AASCountdownText then
-    popup.AASCountdownText:Hide()
+    feedbackText:SetText("Auto Accept Summon: accepting…")
+    feedbackText:SetTextColor(0.6, 1, 0.6)
+    feedback:Show()
   end
 end
 
@@ -103,7 +120,7 @@ local function stopWatching()
     ticker:Cancel()
     ticker = nil
   end
-  hideCountdownText()
+  hideFeedback()
   activeToken = nil
 end
 
@@ -112,7 +129,7 @@ local function tryAutoAccept()
     return
   end
 
-  updateCountdownText()
+  updateFeedback()
 
   local timeLeft = C_SummonInfo.GetSummonConfirmTimeLeft()
   if timeLeft <= 0 then
@@ -164,9 +181,7 @@ end)
 
 hooksecurefunc("StaticPopup_Show", function(which)
   if which == "CONFIRM_SUMMON" and activeToken then
-    C_Timer.After(0, function()
-      updateCountdownText()
-    end)
+    C_Timer.After(0, updateFeedback)
   end
 end)
 
